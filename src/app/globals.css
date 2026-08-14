@@ -1,26 +1,878 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------------------------------------------------------------------------
+   Design tokens — no dark mode. The page is light except for one dark slab at
+   the top: the header and hero read as a single black block, and everything
+   below the hero is the light canvas.
+
+   Colour: every pairing was checked against WCAG AA before being committed.
+   Black is the primary — it fills every primary CTA on the light page.
+
+   THE ACCENT FOLLOWS THE SURFACE. Dark olive green is the accent on light
+   (5.80:1 on canvas — unlike most olives, safe for the 0.75rem eyebrows), and
+   gold is the accent on dark (8.14:1 on the hero). This is not two brands: it
+   is one rule, forced by contrast. Olive on the hero slab measures 3.31:1 and
+   fails AA outright, so it must never appear on a dark surface.
+
+   That inverts the old rule, which kept gold off the light page — gold measures
+   2.36:1 on canvas, failing even the 3:1 floor for graphical objects. Both
+   halves still hold: --color-gold and --color-gold-bright are dark-surface
+   only, --color-accent is light-surface only, and neither ever crosses over.
+   The one deliberate exception is the brand mark itself (public/logo-mark.png,
+   gold, in the header and footer): WCAG 1.4.11 exempts logotypes from contrast
+   requirements, and the image is alt="" with the adjacent wordmark carrying the
+   name. That exemption covers the raster mark only — never the token.
+
+   Type + motion: values below were measured from computed styles on attio.com
+   and linear.app rather than guessed. The tracking inflection at 2.5rem and the
+   asymmetric button transition are both taken directly from those sites.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* ---------- Colour ---------- */
+  --color-canvas: #fcfcfc;
+  --color-surface: #ffffff;
+  --color-sunken: #f6f6f5;
+  --color-line: #e6e6e4;
+  --color-line-strong: #d2d2cf;
+  --color-ink: #16171a; /* 17.47:1 on canvas */
+  --color-muted: #6b6f76; /* 4.92:1 on canvas */
+  --color-faint: #9ba0a6; /* decorative only — below AA for body text */
+
+  /* Primary — black. Fills every primary CTA.
+     Note the hover LIGHTENS where the accent's darkens: at near-black there is
+     nowhere darker to go, so #16171a → #000 would be an invisible hover. */
+  --color-primary: #16171a; /* white on it: 17.92:1 */
+  --color-primary-hover: #2b2d33; /* white on it: 13.76:1 */
+  --color-primary-ring: #3a3d44; /* button border, lighter than fill */
+
+  --color-accent: #556b2f; /* 5.80:1 on canvas, 5.95:1 under white */
+  --color-accent-hover: #445625; /* 7.86:1 on canvas */
+  --color-accent-tint: #eef1e5; /* accent-hover on it: 7.05:1 */
+
+  /* Dark surfaces. Two of them, and they have to stay visually distinct: the
+     hero slab is the ground, the signal panel sits on it and must read as
+     lifted. Contrast ratio is the wrong tool for separating two near-blacks —
+     these two measure 1.09:1, which sounds identical — so the gap was tuned in
+     perceived lightness instead: L* 2.98 against 8.16, a delta of 5.2. That is
+     the smallest separation that still reads as "screen lit in a dark room"
+     rather than a rendering artefact. Judge any future change to these two by
+     L*, never by ratio. */
+  --color-hero: #0a0b0c;
+  --color-panel: #16181b;
+  --color-panel-line: #2a2d31;
+  --color-panel-ink: #f2f3f4; /* 16.01:1 on panel, 17.73:1 on hero */
+  --color-panel-muted: #8a9099; /* 5.53:1 on panel, 6.13:1 on hero */
+
+  /* Gold — dark surfaces only. See the exemption note in the header block. */
+  --color-gold: #c9a227; /* 7.35:1 on panel, 8.14:1 on hero */
+  --color-gold-bright: #e8c64a; /* 10.68:1 on panel, 11.83:1 on hero */
+
+  --color-loss: #e0674f;
+  --color-gain: #2fbf87;
+
+  /* ---------- Type ---------- */
+  /* "cv01","ss03" is Linear's Inter tuning — straight-tailed l, curved forms. */
+  --default-font-feature-settings: "cv01", "ss03";
+
+  --text-display: clamp(2.5rem, 5.6vw, 4rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.022em;
+  --text-display--font-weight: 600;
+
+  --text-h2: clamp(1.875rem, 3.6vw, 2.5rem);
+  --text-h2--line-height: 1.12;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: -0.015em;
+  --text-h3--font-weight: 600;
+
+  --text-lead: clamp(1.0625rem, 1.4vw, 1.1875rem);
+  --text-lead--line-height: 1.55;
+  --text-lead--letter-spacing: -0.011em;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: -0.011em;
+
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-small--letter-spacing: -0.013em;
+
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 500;
+
+  /* ---------- Layout ---------- */
+  --container-content: 75rem; /* 1200px */
+  --container-prose: 45rem; /* 720px */
+
+  --radius-btn: 10px;
+  --radius-card: 12px;
+  --radius-cell: 16px;
+  --radius-panel: 20px;
+
+  /* ---------- Motion (measured curves — nobody uses 0.16,1,0.3,1) ---------- */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1); /* Attio's default */
+  --ease-out-sharp: cubic-bezier(0, 0, 0, 1);
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1); /* Linear's */
+
+  --animate-marquee: marquee 38s linear infinite;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* The hover specular. offset-path walks an element around a rounded rect at
+   UNIFORM speed, which is the whole reason this is not a rotating conic
+   gradient: a conic sweeps by angle from the centre, so on a 222×40 button the
+   highlight crawls at the middle of the long edge and rockets around the
+   corners — measured at a 32× speed difference end to end. Widening the arc to
+   hide that just lights whole edges at once and stops reading as travel at all.
+   offset-distance is parameterised by arc length, so it does not care about the
+   aspect ratio and every button shimmers at the same pace. */
+@keyframes shine-orbit {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* Hero load sequence. Driven entirely by CSS rather than state, which keeps
+   the whole hero a Server Component with zero client JS, still animates with
+   JS disabled, and collapses to the final frame under the reduced-motion
+   backstop below. `both` fill mode holds the from-state before the delay. */
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes wipe-x {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Clears the 4rem sticky header for anchor targets, plus 1rem of air.
+       Set once here — never also as a positive scroll-margin-top on the
+       sections, or the two offsets stack and every anchor lands too far down. */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Anchored sections carry generous top padding (py-14 / lg:py-24), so landing
+     their top edge under the header drops you onto empty space with the heading
+     far below — technically correct, but it reads as "the link didn't work".
+     A negative scroll-margin absorbs that padding so the *heading* lands ~112px
+     from the top at every breakpoint, about 48px clear of the header.
+     Final position = scroll-padding-top + scroll-margin-top. */
+  section[id] {
+    scroll-margin-top: -1.5rem; /* 80 − 24 = 56; + 56 padding → heading at 112 */
+  }
+  @media (min-width: 1024px) {
+    section[id] {
+      scroll-margin-top: -4rem; /* 80 − 64 = 16; + 96 padding → heading at 112 */
+    }
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-tint);
+    color: var(--color-accent-hover);
+  }
+
+  /* Stays on accent, not primary. A primary-black ring would be invisible
+     against the black fill of .btn-primary — the one control most likely to be
+     keyboard-focused. Olive on black is unambiguous. Do not "tidy" this. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Every numeral on the page. Tabular so figures never shift width. */
+  .tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .shell {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+  @media (min-width: 1024px) {
+    .shell {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* ---- Buttons -----------------------------------------------------------
+     The asymmetric transition is Attio's: 300ms out, 50ms in. Hover feels
+     instant, un-hover decays gently. Does more for perceived quality than any
+     easing curve. The border being LIGHTER than the fill is the inner-highlight
+     ring — cheaper than an inset shadow.                                    */
+  .btn {
+    /* Containing block for the shine ring below. Deliberately NOT
+       `isolation: isolate` — the ring paints above the fill, and isolating
+       would only matter if anything here used a negative z-index. */
+    position: relative;
+    /* Clips the travelling specular to the button, so it reads as the inner rim
+       catching light instead of a coloured smudge leaking onto the surface
+       behind it — which is exactly how it looked on the white pricing cards
+       before. The outward half of the glow is the box-shadow bloom below
+       instead, which overflow does not clip. Neither outlines nor the element's
+       own box-shadow are affected by this, so focus rings still draw. */
+    overflow: hidden;
+    /* The radius is a variable because the specular's offset-path has to trace
+       the same rounded rect at both breakpoints, and two literals would drift. */
+    --btn-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.875rem;
+    padding-inline: 1.125rem;
+    border-radius: var(--btn-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.006em;
+    white-space: nowrap;
+    transition:
+      background-color 300ms var(--ease-emphasized),
+      border-color 300ms var(--ease-emphasized),
+      box-shadow 300ms var(--ease-emphasized),
+      color 300ms var(--ease-emphasized);
+  }
+  @media (min-width: 1024px) {
+    .btn {
+      height: 2.5rem;
+      padding-inline: 1rem;
+      --btn-radius: var(--radius-btn);
+      font-size: 0.875rem;
+    }
+  }
+  .btn:hover,
+  .btn:active {
+    transition-duration: 50ms;
+  }
+
+  /* ---- Hover shine: colours ----------------------------------------------
+     Gold throughout, and this is the one place the olive/gold surface rule at
+     the top of this file is deliberately not followed. That rule is about
+     legibility of text and marks; this is a blurred specular. Tried olive on
+     the white buttons first and it reads as a dirty green smear — olive is a
+     desaturated dark green, so on white it looks like dirt rather than light.
+     Ink is worse: a grey smudge. Gold is saturated and warm, so on white it
+     reads as a warm gleam, which is the whole point.
+
+     Two golds, split by fill rather than by surface. --color-gold-bright is
+     correct on a dark fill, where anything is brighter than the ground. On a
+     WHITE fill nothing can be brighter than the fill, so the specular has to
+     register as a tint instead — and #e8c64a is too pale against #fff to
+     register at all. The deeper --color-gold is what actually shows up there.
+
+     --btn-bloom stays separate from --btn-shine even though both are gold
+     today: the specular rides the button's own rim, the bloom spills onto
+     whatever surface surrounds it, and those are not the same question. */
+  .btn {
+    --btn-shine: var(--color-gold-bright);
+    --btn-bloom: var(--color-gold);
+  }
+  .btn-inverse,
+  .btn-secondary {
+    --btn-shine: var(--color-gold);
+  }
+
+  /* The primary CTA is black, so on the dark slab it would be a black button on
+     a black ground. .btn-inverse is the same button turned inside out for that
+     surface: white fill, ink label, 19.7:1 against the hero. Primary stays the
+     highest-contrast button on the page in both directions — which is the point
+     of calling it primary. Used in the hero and in the header while unscrolled;
+     the header swaps back to .btn-primary once it is over the light page. */
+  .btn-inverse {
+    background-color: #ffffff;
+    border: 1px solid rgb(255 255 255 / 0.9);
+    color: var(--color-ink); /* 17.92:1 on the white fill */
+  }
+  .btn-inverse:hover {
+    background-color: #e8e9ea;
+    border-color: #e8e9ea;
+    box-shadow: 0 2px 18px -4px color-mix(in srgb, var(--btn-bloom) 30%, transparent);
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary-ring);
+    color: #ffffff;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+    border-color: #4a4e57; /* tracks the lighter fill — stays above it */
+    /* The only place gold touches the light canvas. It is a blurred decorative
+       halo at 28%, not a mark or a label, so the dark-surfaces-only rule at the
+       top of this file does not bite — that rule is about legibility. */
+    box-shadow: 0 2px 18px -4px color-mix(in srgb, var(--btn-bloom) 28%, transparent);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    color: var(--color-ink);
+    box-shadow: 0 1px 2px rgb(11 13 24 / 0.024);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-canvas);
+    border-color: var(--color-line-strong);
+    /* The static elevation shadow has to be restated — box-shadow does not
+       accumulate, so listing only the bloom would drop it on hover. */
+    box-shadow:
+      0 1px 2px rgb(11 13 24 / 0.024),
+      0 2px 14px -4px color-mix(in srgb, var(--btn-bloom) 22%, transparent);
+  }
+
+  /* On the dark panel */
+  .btn-onpanel {
+    background-color: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.16);
+    color: var(--color-panel-ink);
+  }
+  .btn-onpanel:hover {
+    background-color: rgb(255 255 255 / 0.14);
+    box-shadow: 0 2px 20px -4px color-mix(in srgb, var(--btn-bloom) 30%, transparent);
+  }
+
+  /* ---- Hover shine: the travelling specular ------------------------------
+     A soft elongated blob walked around the button's perimeter by offset-path.
+     offset-rotate: auto keeps its long axis tangent to the edge, so it stays a
+     streak riding the rim rather than a disc rolling along it — the difference
+     between reading as light and reading as a dot.
+
+     Softness comes from the radial-gradient itself, NOT from filter: blur().
+     That is load-bearing. mask is applied after filter, so any masked-and-
+     blurred variant of this gets hard-clipped straight back to a sharp edge;
+     building the falloff into the gradient sidesteps the ordering entirely and
+     lets overflow:hidden on .btn do the clipping cleanly.
+
+     Sized against the 40px button: 20px tall means ~10px of glow inboard of the
+     rim, which stops well clear of the label at every width.
+
+     The outward half of the glow is the box-shadow bloom on the :hover rules
+     above. It is a shadow and not a second pseudo-element because a blurred
+     halo pseudo would need z-index:-1 to sit behind the fill, and negative-z
+     children paint into the nearest ancestor stacking context — which in the
+     final CTA is .panel-wrap (isolation: isolate), burying the halo behind
+     .panel-screen's opaque background where it vanishes. */
+  @supports (offset-path: rect(0 100% 100% 0)) {
+    @media (prefers-reduced-motion: no-preference) and (hover: hover) {
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 76px;
+        height: 20px;
+        offset-path: rect(0 100% 100% 0 round var(--btn-radius));
+        offset-rotate: auto;
+        background: radial-gradient(
+          closest-side,
+          color-mix(in srgb, var(--btn-shine) 45%, #ffffff) 0%,
+          var(--btn-shine) 32%,
+          color-mix(in srgb, var(--btn-shine) 40%, transparent) 60%,
+          transparent 100%
+        );
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 300ms var(--ease-emphasized);
+        /* Declared here but held paused, so offset-distance is never reset
+           between hovers: the streak fades out from wherever it stopped instead
+           of snapping back to the corner. Browsers do not tick paused
+           animations, so the idle buttons cost nothing. */
+        animation: shine-orbit 3800ms linear infinite;
+        animation-play-state: paused;
+      }
+      /* Matches the 300/50 asymmetry of .btn itself — the pseudo needs its own
+         rule, the parent's transition-duration does not reach it. */
+      .btn:hover::before,
+      .btn:focus-visible::before {
+        opacity: 1;
+        transition-duration: 50ms;
+        animation-play-state: running;
+      }
+    }
+  }
+
+  /* ---- Hero atmosphere ---------------------------------------------------
+     Attio's three-layer stack, now the right way up: they draw white pinstripes
+     over a colour wash on a dark ground, which is exactly what this is. The
+     earlier light-page version had to invert it and draw ink lines on near-
+     white; that inversion is gone. No feTurbulence — the texture is 1px stripes
+     every 8px.
+
+     The wash mixes from --color-gold rather than restating it as a literal. The
+     accent used to be duplicated here as rgb(15 122 85), which is precisely how
+     it went stale last time — mix from the token and it can never drift. Gold
+     and not olive because this is a dark surface, per the rule in the header
+     block. It sits low and centred so it reads as light spilling up from behind
+     the signal panel rather than as a coloured background.                   */
+  .hero-atmos {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--color-hero);
+    color: var(--color-panel-ink);
+  }
+  /* The glow belongs to the CHART, not the headline. It is centred at 50% 74% —
+     roughly the middle of the signal panel — and spreads outward from behind
+     it, so the panel reads as the thing emitting light. The headline stays on
+     clean near-black; putting a wash behind type only lowers its contrast and
+     buys nothing. Gold rather than olive, per the dark-surface rule.
+
+     This is the wide ambient halo. The tight bloom hugging the panel's edges is
+     .panel-wrap::before — the two are tuned together, so change them together
+     or the chart ends up either haloed twice or not at all.                 */
+  .hero-atmos::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(
+        75% 48% at 50% 74%,
+        color-mix(in srgb, var(--color-gold) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-gold) 7%, transparent) 46%,
+        transparent 76%
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0.022) 0px,
+        rgb(255 255 255 / 0.022) 1px,
+        transparent 1px,
+        transparent 8px
+      );
+  }
+  /* The slab ends on a clean edge against the next section — no gradient
+     hand-off. A fade was tried here and removed: compositing near-black up to
+     canvas necessarily travels through mid-grey, and over any distance long
+     enough to read as smooth that grey occupies a wide band that looks like
+     haze sitting on the page. Shortening it only trades the haze for visible
+     banding. A crisp edge between two deliberately different surfaces is the
+     stronger result, so if this needs softening again, do it by changing what
+     the next section is — not by fading this one out. */
+
+  /* ---- The floating dark panel ------------------------------------------
+     Attio's bezel, Linear's masked corner shine. Radius maths is concentric:
+     20px bezel − 6px padding = 14px inner.
+
+     Dark-on-dark changes how this lifts. A drop shadow is what separated the
+     panel from the light page, and on a near-black ground a black shadow is
+     invisible — so the depth cue is inverted: the panel is LIGHTER than its
+     ground (L* 8.16 against 2.98) and the old 6-layer shadow ramp is replaced
+     by light. A blurred gold bloom behind it and a white hairline bezel around
+     it read as a screen glowing in a dark room. Do not reinstate the shadow
+     ramp here; it renders as nothing and only costs paint.                  */
+  /* The bloom colour follows the surface, exactly like the accent: olive where
+     the panel sits on the light page (the final CTA), gold inside the dark
+     hero. Declaring it as a variable here and overriding it in one place beats
+     duplicating the whole ::before rule for each context. */
+  .panel-wrap {
+    --panel-bloom: color-mix(in srgb, var(--color-accent) 30%, transparent);
+    --panel-bloom-blur: 28px;
+    --panel-bloom-spread: -14px;
+    position: relative;
+    isolation: isolate;
+  }
+  .hero-atmos .panel-wrap {
+    --panel-bloom: color-mix(in srgb, var(--color-gold) 45%, transparent);
+    --panel-bloom-blur: 52px;
+    --panel-bloom-spread: -30px;
+  }
+  .panel-wrap::before {
+    content: "";
+    position: absolute;
+    inset: var(--panel-bloom-spread);
+    z-index: -1;
+    border-radius: 34px;
+    filter: blur(var(--panel-bloom-blur));
+    background: radial-gradient(62% 62% at 50% 45%, var(--panel-bloom) 0%, transparent 72%);
+  }
+
+  .panel-bezel {
+    /* position + overflow are for the hover specular below. Clipping is safe:
+       .panel-screen sits 6px inside a tighter radius, so nothing real is cut. */
+    position: relative;
+    overflow: hidden;
+    padding: 6px;
+    border-radius: var(--radius-panel);
+    background: rgb(255 255 255 / 0.04);
+    backdrop-filter: blur(12px);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.06),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 16px 40px rgb(0 0 0 / 0.5);
+  }
+
+  /* Same travelling specular as the buttons, scaled to the panel: a longer,
+     thinner streak on a slower lap, because the perimeter is roughly six times
+     as long and reusing the button's timing would send it round like a strobe.
+
+     --panel-shine follows the surface the way --panel-bloom above does, and for
+     the same reason: bright gold on the dark hero, the deeper gold where the
+     panel sits on the light page, since #e8c64a has nothing to be brighter
+     than there. Kept clipped to the bezel so the streak never spills gold onto
+     the light page — the outward glow is already .panel-wrap::before's job. */
+  .panel-wrap {
+    --panel-shine: var(--color-gold);
+  }
+  .hero-atmos .panel-wrap {
+    --panel-shine: var(--color-gold-bright);
+  }
+
+  /* Unlike the buttons this one runs on its own, with no hover gate — the panel
+     is the page's centrepiece, not a control, so the light just keeps moving.
+     That also means no (hover: hover) query: there is nothing to gate, and
+     touch users should see it too. The reduced-motion query stays and is doing
+     real work here, since this is the one animation on the page that never
+     stops on its own. */
+  @supports (offset-path: rect(0 100% 100% 0)) {
+    @media (prefers-reduced-motion: no-preference) {
+      .panel-bezel::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 340px;
+        height: 26px;
+        offset-path: rect(0 100% 100% 0 round var(--radius-panel));
+        offset-rotate: auto;
+        background: radial-gradient(
+          closest-side,
+          color-mix(in srgb, var(--panel-shine) 30%, #ffffff) 0%,
+          color-mix(in srgb, var(--panel-shine) 85%, transparent) 34%,
+          color-mix(in srgb, var(--panel-shine) 22%, transparent) 66%,
+          transparent 100%
+        );
+        pointer-events: none;
+        animation: shine-orbit 8500ms linear infinite;
+      }
+    }
+  }
+
+  /* The hero slab's pinstripe texture, for any dark surface that wants it. Set
+     as the element's own background-image rather than a pseudo-element so
+     content paints above it with no stacking-context juggling. Pair it with a
+     background-color — it does not supply one. */
+  .panel-striped {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0.022) 0px,
+      rgb(255 255 255 / 0.022) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  }
+
+  .panel-screen {
+    position: relative;
+    border-radius: 14px;
+    background-color: var(--color-panel);
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+  }
+  .panel-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    border: 1px solid rgb(255 255 255 / 0.24);
+    pointer-events: none;
+    mask-image: radial-gradient(
+      200px 200px at 0% 0%,
+      #000 0%,
+      rgb(0 0 0 / 0.6) 30%,
+      rgb(0 0 0 / 0.2) 50%,
+      transparent 70%
+    );
+  }
+
+  /* ---- Bento -------------------------------------------------------------
+     Attio's technique: no borders anywhere. The container background is the
+     hairline colour and a 1px grid gap lets it show through as a perfect
+     lattice. No double-border seams, no :last-child cleanup.                */
+  .bento {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background-color: var(--color-line);
+    border-block: 1px solid var(--color-line);
+  }
+  @media (min-width: 768px) {
+    .bento {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .bento {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .bento > .bento-wide {
+      grid-column: span 2;
+    }
+  }
+  /* Full-bleed cell. `1 / -1` spans whatever the current column count is, so
+     the closing cell fills the last row at every breakpoint instead of
+     leaving an empty lattice square beside it. */
+  .bento > .bento-full {
+    grid-column: 1 / -1;
+  }
+  .bento-cell {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-surface);
+    padding: 2rem 1.5rem;
+    transition: background-color 300ms var(--ease-emphasized);
+  }
+  .bento-cell:hover {
+    background-color: var(--color-sunken);
+    transition-duration: 50ms;
+  }
+
+  /* ---- A section that turns dark as you scroll into it --------------------
+     The transition is TEMPORAL — a timed background-color change — not the
+     spatial gradient tried at the bottom of the hero. That distinction is the
+     whole reason this one looks smooth: at any given instant the entire section
+     is a single flat colour, so there is never a mid-grey band sitting on the
+     page. A gradient ramp between two surfaces always puts that band on screen;
+     an animated colour never does.
+
+     The content is styled light-on-dark and never transitions with it. If the
+     text animated too it would cross the background somewhere near the midpoint
+     — ink and panel-ink meet around #848589, which is also where the background
+     is — and briefly vanish.
+
+     Dark is the DEFAULT, with the light start state gated behind
+     `scripting: enabled` exactly as .reveal does below. Without JS the section
+     is simply dark from first paint instead of light text on a light ground. */
+  .section-dark {
+    /* Remap the light-surface tokens to their dark counterparts for the whole
+       subtree. Tailwind compiles text-ink to `color: var(--color-ink)`, so
+       redefining the variable here re-points every utility inside at once —
+       SectionHead, RiskCalculator, the table and its cards all adapt with no
+       component changes and no `onDark` prop threaded through them. Making a
+       section dark is then exactly one class.
+
+       --color-accent maps to gold because the accent follows the surface; see
+       the rule in the header block. Every value below was measured on both
+       grounds — the slab itself and the cards sitting on it:
+
+         ink    17.73:1 / 16.01:1      faint  5.15:1 / 4.65:1
+         muted   6.13:1 /  5.53:1      accent 8.14:1 / 7.35:1
+
+       --color-primary is deliberately NOT remapped: .btn-primary hardcodes
+       white text, so any remap makes it white-on-white. A CTA in here uses
+       .btn-inverse instead. */
+    --color-ink: var(--color-panel-ink);
+    --color-muted: var(--color-panel-muted);
+    --color-faint: #7d838a;
+    --color-line: var(--color-panel-line);
+    --color-line-strong: #3a3e44;
+    --color-surface: var(--color-panel);
+    --color-sunken: #1d2024;
+    --color-accent: var(--color-gold);
+
+    position: relative;
+    isolation: isolate;
+    background-color: var(--color-hero);
+    color: var(--color-panel-ink);
+    transition: background-color 600ms var(--ease-emphasized);
+  }
+  @media (scripting: enabled) {
+    .section-dark[data-dark="false"] {
+      background-color: var(--color-canvas);
+    }
+  }
+  /* Same gold pool as the hero, so the two dark slabs read as one material.
+     Fades in with the background rather than being visible over the light
+     state, which would show as a gold smudge on white before the flip. */
+  .section-dark::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 1;
+    transition: opacity 600ms var(--ease-emphasized);
+    background:
+      radial-gradient(
+        70% 60% at 50% 50%,
+        color-mix(in srgb, var(--color-gold) 13%, transparent) 0%,
+        transparent 72%
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0.022) 0px,
+        rgb(255 255 255 / 0.022) 1px,
+        transparent 1px,
+        transparent 8px
+      );
+  }
+  @media (scripting: enabled) {
+    .section-dark[data-dark="false"]::before {
+      opacity: 0;
+    }
+  }
+
+  /* ---- Scroll reveal -----------------------------------------------------
+     Measured: 20px travel, 400ms, Attio's emphasized curve. The hidden state
+     is gated behind motion-safe so a reduced-motion user's content is visible
+     from the very first paint and never depends on JS to appear.            */
+  .reveal {
+    transition:
+      opacity 400ms var(--ease-emphasized),
+      transform 400ms var(--ease-emphasized);
+  }
+  /* `scripting: enabled` guards the hidden state so it is never applied when
+     JS is unavailable — SSR emits data-visible="false", so without this the
+     page would render blank below the hero for anyone whose JS fails to run.
+     A media query rather than a class set by an inline script: no hydration
+     mismatch on <html>, and nothing to suppress. Browsers too old to support
+     the query simply skip the rule, which means content visible but not
+     animated — the safe direction to fail in. */
+  @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+    .reveal[data-visible="false"] {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+  .reveal[data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Hero sequence utilities. Delay is set inline per element. */
+  .seq-draw {
+    animation: draw-line 1800ms var(--ease-out-expo) both;
+  }
+  .seq-fade {
+    animation: fade-in 800ms var(--ease-emphasized) both;
+  }
+  .seq-rise {
+    animation: rise-in 600ms var(--ease-emphasized) both;
+  }
+  .seq-wipe {
+    animation: wipe-x 700ms var(--ease-emphasized) both;
+  }
+
+  /* Focus rings for the two interactive charts. The default UA ring is
+     invisible against the panel, and `outline` rather than a box-shadow so it
+     traces the SVG wrapper cleanly.
+     Two classes, not one, because the ring obeys the same rule as everything
+     else here: the accent follows the surface. Gold on the light canvas
+     measures 2.36:1 and would fail the 3:1 floor for a focus indicator. */
+  .chart-focus:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .chart-focus-panel:focus-visible {
+    outline: 2px solid var(--color-gold-bright);
+    outline-offset: 2px;
+  }
+
+  /* Edge fade for the marquee — mask works over any background. */
+  .marquee-mask {
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 80px,
+      #000 calc(100% - 80px),
+      transparent 100%
+    );
+  }
+}
+
+/* Backstop. Components gate their own motion, but this catches strays. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    /* The hero sequence sets delays up to 1900ms inline. Zeroing duration
+       alone would still stagger the reveal over two seconds — the delay has to
+       go too. !important beats the inline style. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
 }
