@@ -112,13 +112,13 @@ Two colour rules that are load-bearing and documented at the top of `globals.css
 
 ---
 
-## Before you deploy
+## Domain and deployment
 
-Marked in the codebase as `TODO(deploy)`.
+The site is served from **`https://xauusdsignals.net`**, set once as `SITE_URL` in `src/lib/content/site.ts`. That single constant feeds `metadataBase`, the canonical tag, OG/Twitter URLs, `robots.txt`, `sitemap.xml` and `llms.txt`, so the domain is never hardcoded anywhere else — if it ever changes, change it there and nowhere else.
 
-- [ ] **`SITE_URL` in `src/lib/content/site.ts` — BLOCKING.** It is still a placeholder domain. This one constant feeds `metadataBase`, the canonical tag, OG/Twitter URLs, `robots.txt`, `sitemap.xml` and `llms.txt`. Shipping the placeholder points search engines at a domain you do not own, which is worse than having no SEO at all.
+At the host, point the apex `A`/`ALIAS` record at the deployment and make `www` a **301 redirect to the apex** rather than a second live origin. The canonical tag names the apex; if `www` also serves the page, the two split the ranking signal and disagree with the canonical.
 
-After deploying: submit the sitemap to Google Search Console, or indexing will take weeks.
+After deploying: submit `https://xauusdsignals.net/sitemap.xml` to Google Search Console, or indexing will take weeks.
 
 ## Content and claims policy
 
