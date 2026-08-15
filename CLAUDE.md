@@ -66,9 +66,11 @@ The mobile menu panel must stay **absolutely positioned**. Rendering it in flow 
 
 The page is a Server Component. Only components that genuinely need state or effects carry `"use client"`. The whole hero — chart included — is server-rendered, because its load sequence is CSS keyframes rather than state. Keep it that way.
 
-## Before deploying
+## Domain
 
-One blocking item, marked `TODO(deploy)` in `src/lib/content/site.ts`: `SITE_URL` is still a placeholder domain. It feeds `metadataBase`, the canonical tag, OG/Twitter URLs, `robots.txt`, `sitemap.xml` and `llms.txt`.
+The production origin is `https://xauusdsignals.net`, set once as `SITE_URL` in `src/lib/content/site.ts`. It feeds `metadataBase`, the canonical tag, OG/Twitter URLs, `robots.txt`, `sitemap.xml` and `llms.txt` — never hardcode the domain anywhere else, and keep the apex/https/no-trailing-slash form.
+
+Only one origin should serve the site. If `www` is also reachable it must 301 to the apex at the host, not in the code — two live origins split the ranking signal and contradict the canonical tag.
 
 ## Source material
 

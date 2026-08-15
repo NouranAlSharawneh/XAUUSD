@@ -1,14 +1,16 @@
 /** Brand, links, navigation and the broker placement. */
 
 /**
- * TODO(deploy): BLOCKING — replace with the real domain before going live.
+ * The production origin. Apex, https, no trailing slash — the canonical form
+ * every generated URL is built from.
  *
  * This one constant feeds metadataBase, the canonical tag, the OG and Twitter
- * card URLs, robots.txt, sitemap.xml and llms.txt. Deploying with the
- * placeholder is worse than having no SEO at all: the canonical would point
- * search engines at a domain you do not own.
+ * card URLs, robots.txt, sitemap.xml and llms.txt, so it must match the host
+ * the site is actually served from. If www ever becomes the served host,
+ * change it here and redirect the other way at the host, not in the code —
+ * two reachable origins split the ranking signal between them.
  */
-export const SITE_URL = "https://goldsignals.example.com";
+export const SITE_URL = "https://xauusdsignals.net";
 
 export const BRAND = {
   name: "Gold Signals",
